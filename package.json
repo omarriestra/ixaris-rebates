@@ -9,6 +9,7 @@
     "dev:react": "webpack serve --mode=development --config webpack.renderer.config.js",
     "build": "npx webpack --mode=production --config webpack.renderer.config.js",
     "dist": "electron-builder",
+    "dist:mac": "electron-builder --mac --publish never",
     "dist:portable": "electron-builder --win --publish never",
     "test": "jest",
     "test:watch": "jest --watch",
@@ -29,6 +30,15 @@
       "assets/**/*",
       "node_modules/**/*"
     ],
+    "mac": {
+      "identity": null,
+      "target": [
+        {
+          "target": "default",
+          "arch": ["arm64", "x64"]
+        }
+      ]
+    },
     "win": {
       "target": [
         {
