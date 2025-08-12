@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ixaris Rebates Calculator</title>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval';">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-logo">
+          <div class="sidebar-logo-icon">I</div>
+          <div class="sidebar-logo-text">
+            <h1>Ixaris</h1>
+            <p>Rebates Calculator</p>
+          </div>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <!-- Main Navigation -->
+        <div class="nav-section">
+          <button class="nav-item" data-page="import">
+            <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+            </svg>
+            Import Files
+          </button>
+
+          <button class="nav-item" data-page="results" disabled>
+            <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+            </svg>
+            Results
+          </button>
+
+          <button class="nav-item" data-page="table" disabled>
+            <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+            </svg>
+            Detailed Table
+          </button>
+        </div>
+
+        <!-- Data Status -->
+        <div class="nav-section">
+          <div class="nav-section-title">Data Status</div>
+          
+          <div class="nav-item" style="cursor: default;">
+            <div class="status-indicator active" data-status="configuration"></div>
+            Configuration
+          </div>
+          
+          <div class="nav-item" style="cursor: default;">
+            <div class="status-indicator" data-status="files"></div>
+            Files Imported
+          </div>
+          
+          <div class="nav-item" style="cursor: default;">
+            <div class="status-indicator" data-status="rebates"></div>
+            Rebates Calculated
+          </div>
+        </div>
+      </nav>
+
+      <!-- Footer -->
+      <div class="sidebar-footer" style="padding: var(--space-4); border-top: 1px solid var(--color-border); text-align: center;">
+        <div class="text-xs text-muted">Ixaris Rebates Calculator</div>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      <!-- Header -->
+      <header class="content-header">
+        <h1 class="page-title" id="page-title">Import Files</h1>
+        <div class="header-actions">
+          <button class="btn" onclick="location.reload()">
+            <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+            </svg>
+            Refresh
+          </button>
+        </div>
+      </header>
+
+      <!-- Page Content -->
+      <div class="content-body">
+        <!-- Global Loading Indicator -->
+        <div id="global-loader" class="loading hidden">
+          <div class="spinner"></div>
+          <span data-loading-message>Loading...</span>
+        </div>
+
+        <!-- Notifications Container -->
+        <div id="notifications" style="position: fixed; top: 20px; right: 20px; z-index: 1000; width: 320px;"></div>
+
+        <!-- Import Page -->
+        <div data-page-content="import">
+          <!-- Session Status -->
+          <div id="session-status" class="hidden mb-6"></div>
+
+          <!-- Page Introduction -->
+          <div class="mb-8">
+            <h2 class="text-lg font-semibold mb-2">Import Data Files</h2>
+            <p class="text-secondary">Upload your transaction and rebate configuration files to begin processing. Required files are marked with *.</p>
+          </div>
+
+          <!-- Required Files -->
+          <div class="mb-8">
+            <h3 class="font-semibold mb-4 text-secondary">Required Files</h3>
+            <div id="file-cards" class="grid grid-3"></div>
+          </div>
+
+          <!-- Optional Files -->
+          <div class="mb-8">
+            <h3 class="font-semibold mb-4 text-secondary">Optional Files</h3>
+            <p class="text-sm text-muted mb-4">These files provide additional processing rules and can improve calculation accuracy.</p>
+            <div id="optional-files" class="grid grid-2"></div>
+          </div>
+
+          <!-- Calculate Section -->
+          <div class="card">
+            <div class="card-body text-center">
+              <h3 class="font-semibold mb-4">Ready to Calculate</h3>
+              <p class="text-secondary mb-6">Once you've imported the required files, click below to start calculating rebates.</p>
+              
+              <button id="calculate-btn" class="btn btn-primary btn-lg" disabled>
+                <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                </svg>
+                Calculate Rebates
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Results Page -->
+        <div data-page-content="results" class="hidden">
+          <div class="mb-8">
+            <h2 class="text-lg font-semibold mb-2">Calculation Results</h2>
+            <p class="text-secondary">Summary of your rebate calculations and export options.</p>
+          </div>
+
+          <div id="calculation-summary"></div>
+
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">Export Options</div>
+            </div>
+            <div class="card-body">
+              <p class="text-secondary mb-4">Generate Excel reports with your calculation results.</p>
+              
+              <div class="flex gap-4">
+                <button id="export-btn" class="btn btn-primary">
+                  <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m0 0l3 3m3-3m-3 3m0 0l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"></path>
+                  </svg>
+                  Export to Excel
+                </button>
+
+                <button class="btn" onclick="app.navigateTo('table')">
+                  <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                  </svg>
+                  View Detailed Table
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Table Page -->
+        <div data-page-content="table" class="hidden">
+          <div class="mb-8">
+            <h2 class="text-lg font-semibold mb-2">Detailed Results</h2>
+            <p class="text-secondary">Detailed view of all calculated rebates.</p>
+          </div>
+
+          <div id="data-table"></div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

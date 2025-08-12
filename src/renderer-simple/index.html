@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ixaris Rebates Calculator - Simple</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app">
+        <!-- Header -->
+        <header class="header">
+            <h1>🧮 Ixaris Rebates Calculator</h1>
+            <div class="status">
+                <span id="status-indicator">Ready</span>
+                <button id="refresh-btn" class="btn-small">🔄 Refresh</button>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main">
+            <!-- Import Section -->
+            <section class="section">
+                <h2>📁 Import Files</h2>
+                <div class="import-grid">
+                    <!-- Required Files -->
+                    <div class="file-group">
+                        <h3>Required Files</h3>
+                        <div class="file-card" data-type="transactions">
+                            <div class="file-info">
+                                <h4>Transaction Data</h4>
+                                <p>Main transaction file for calculation</p>
+                            </div>
+                            <div class="file-actions">
+                                <button class="btn-import" data-import="transactions">Import File</button>
+                                <span class="file-status">Not loaded</span>
+                            </div>
+                        </div>
+                        
+                        <div class="file-card" data-type="visaMCOMonthly">
+                            <div class="file-info">
+                                <h4>Visa/MCO Monthly</h4>
+                                <p>Monthly rebate rates for Visa/Mastercard</p>
+                            </div>
+                            <div class="file-actions">
+                                <button class="btn-import" data-import="visaMCOMonthly">Import File</button>
+                                <span class="file-status">Not loaded</span>
+                            </div>
+                        </div>
+                        
+                        <div class="file-card" data-type="visaMCOYearly">
+                            <div class="file-info">
+                                <h4>Visa/MCO Yearly</h4>
+                                <p>Yearly rebate rates for Visa/Mastercard</p>
+                            </div>
+                            <div class="file-actions">
+                                <button class="btn-import" data-import="visaMCOYearly">Import File</button>
+                                <span class="file-status">Not loaded</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Optional Files -->
+                    <div class="file-group">
+                        <h3>Optional Files</h3>
+                        <div class="file-card" data-type="partnerPayMonthly">
+                            <div class="file-info">
+                                <h4>PartnerPay Monthly</h4>
+                                <p>Monthly PartnerPay rates</p>
+                            </div>
+                            <div class="file-actions">
+                                <button class="btn-import" data-import="partnerPayMonthly">Import File</button>
+                                <span class="file-status">Not loaded</span>
+                            </div>
+                        </div>
+                        
+                        <div class="file-card" data-type="partnerPayYearly">
+                            <div class="file-info">
+                                <h4>PartnerPay Yearly</h4>
+                                <p>Yearly PartnerPay rates</p>
+                            </div>
+                            <div class="file-actions">
+                                <button class="btn-import" data-import="partnerPayYearly">Import File</button>
+                                <span class="file-status">Not loaded</span>
+                            </div>
+                        </div>
+                        
+                        <div class="file-card" data-type="airlinesMCC">
+                            <div class="file-info">
+                                <h4>Airlines MCC</h4>
+                                <p>Airline merchant codes</p>
+                            </div>
+                            <div class="file-actions">
+                                <button class="btn-import" data-import="airlinesMCC">Import File</button>
+                                <span class="file-status">Not loaded</span>
+                            </div>
+                        </div>
+                        
+                        <div class="file-card" data-type="regionCountry">
+                            <div class="file-info">
+                                <h4>Region Country</h4>
+                                <p>Regional mapping rules</p>
+                            </div>
+                            <div class="file-actions">
+                                <button class="btn-import" data-import="regionCountry">Import File</button>
+                                <span class="file-status">Not loaded</span>
+                            </div>
+                        </div>
+                        
+                        <div class="file-card" data-type="voyagePrive">
+                            <div class="file-info">
+                                <h4>Voyage Prive</h4>
+                                <p>Special Voyage Prive rules</p>
+                            </div>
+                            <div class="file-actions">
+                                <button class="btn-import" data-import="voyagePrive">Import File</button>
+                                <span class="file-status">Not loaded</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Calculation Section -->
+            <section class="section">
+                <h2>🧮 Calculate Rebates</h2>
+                <div class="calculation-area">
+                    <div class="calc-info">
+                        <p>Once you've imported the required files, click below to calculate rebates.</p>
+                        <div id="calc-status" class="calc-status"></div>
+                    </div>
+                    <div class="calc-actions">
+                        <button id="calculate-btn" class="btn-primary" disabled>Calculate Rebates</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Results Section -->
+            <section class="section" id="results-section" style="display: none;">
+                <h2>📊 Results</h2>
+                <div class="results-area">
+                    <div class="results-summary">
+                        <div class="metric">
+                            <span class="metric-label">Rebates Calculated:</span>
+                            <span id="rebates-count" class="metric-value">0</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">Total Amount:</span>
+                            <span id="total-amount" class="metric-value">€0</span>
+                        </div>
+                    </div>
+                    <div class="results-actions">
+                        <button id="export-btn" class="btn-secondary">📤 Export to Excel</button>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Loading overlay -->
+        <div id="loading" class="loading hidden">
+            <div class="loading-content">
+                <div class="spinner"></div>
+                <p id="loading-message">Loading...</p>
+            </div>
+        </div>
+
+        <!-- Notifications -->
+        <div id="notifications" class="notifications"></div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

@@ -1,0 +1,31 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "target": "es2020",
+    "module": "esnext",
+    "moduleResolution": "node",
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": false,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx"
+  },
+  "include": [
+    "src/renderer/**/*",
+    "src/shared/types/**/*",
+    "src/shared/utils/**/*"
+  ],
+  "exclude": [
+    "src/main/**/*",
+    "src/database/**/*",
+    "src/renderer/components/Header.tsx",
+    "src/renderer/contexts/ProgressContext.tsx",
+    "node_modules",
+    "dist"
+  ]
+}
