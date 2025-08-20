@@ -16,7 +16,10 @@
     "test:coverage": "jest --coverage",
     "lint": "eslint src/**/*.{ts,tsx}",
     "lint:fix": "eslint src/**/*.{ts,tsx} --fix",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "postinstall": "electron-builder install-app-deps",
+    "rebuild": "electron-rebuild -f -w better-sqlite3",
+    "install-app-deps": "electron-builder install-app-deps"
   },
   "build": {
     "appId": "com.amadeus.ixaris-rebates-calculator",
@@ -30,6 +33,12 @@
       "assets/**/*",
       "node_modules/**/*"
     ],
+    "asar": true,
+    "asarUnpack": [
+      "**/*.node",
+      "**/node_modules/better-sqlite3/**/*"
+    ],
+    "buildDependenciesFromSource": false,
     "mac": {
       "identity": null,
       "target": [
@@ -55,7 +64,24 @@
           ]
         }
       ],
-      "icon": "assets/icon.ico"
+      "icon": "assets/icon.ico",
+      "asarUnpack": [
+        "**/*.node",
+        "**/node_modules/better-sqlite3/**/*"
+      ]
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": ["x64"]
+        },
+        {
+          "target": "deb",
+          "arch": ["x64"]
+        }
+      ],
+      "category": "Office"
     },
     "nsis": {
       "oneClick": false,
