@@ -1,7 +1,7 @@
 # Ixaris Rebates Calculator
 
 [![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/omarriestra/ixaris-rebates/releases)
-[![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-lightgrey.svg)](#installation)
+[![Platform](https://img.shields.io/badge/platform-macOS%2012%2B-lightgrey.svg)](#installation)
 [![License](https://img.shields.io/badge/license-Proprietary-red.svg)](#license)
 
 Modern desktop application for calculating Ixaris rebates, replacing the legacy Excel Power Query system with a precise, user-friendly, and scalable solution.
@@ -16,21 +16,23 @@ Modern desktop application for calculating Ixaris rebates, replacing the legacy 
 - **🔍 Advanced Filtering**: Interactive table with search, sort, and filter capabilities
 - **📁 CSV Support**: Native support for CSV files without Excel dependency
 - **💾 Data Persistence**: SQLite database with automatic data recovery
-- **🖥️ Cross-Platform**: Built with Electron for Windows 10/11
+- **🖥️ Cross-Platform**: Built with Electron for macOS (Apple Silicon & Intel)
 
 ## 📋 Requirements
 
-- **OS**: Windows 10 or Windows 11 (64-bit)
+- **OS**: macOS 12.0+ (Monterey or later)
+- **Architecture**: Apple Silicon (M1/M2/M3) or Intel (x64)
 - **Memory**: 4GB RAM minimum, 8GB recommended
 - **Storage**: 200MB free disk space
 - **Files**: CSV files with transaction and rebate data
 
 ## 💻 Installation
 
-### Option 1: Portable Executable (Recommended)
-1. Download `Ixaris Rebates Calculator 1.0.0.exe` from [Releases](https://github.com/omarriestra/ixaris-rebates/releases)
-2. Run the executable directly - no installation required
-3. The application will create its data files in the same directory
+### Option 1: macOS Application (Recommended)
+1. Download `Ixaris Rebates Calculator-1.0.0.dmg` from [Releases](https://github.com/omarriestra/ixaris-rebates/releases)
+2. Open the DMG file and drag the app to your Applications folder
+3. Right-click the app and select "Open" (first time only, due to unsigned build)
+4. The application will create its data files automatically
 
 ### Option 2: Development Setup
 ```bash
@@ -124,7 +126,7 @@ npm run lint
 - Electron-based desktop application
 - Professional Amadeus branding
 - SQLite database with data persistence
-- Windows 10/11 portable executable
+- macOS universal binary (Apple Silicon + Intel)
 
 ## 🤝 Contributing
 

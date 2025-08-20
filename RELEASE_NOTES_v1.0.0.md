@@ -2,7 +2,7 @@
 
 **Release Date**: August 12, 2025  
 **Version**: 1.0.0 (Initial MVP Release)  
-**Platform**: Windows 10/11 (64-bit)  
+**Platform**: macOS 12.0+ (Apple Silicon & Intel)  
 
 ## 🎉 First Official Release
 
@@ -47,10 +47,10 @@ This is the **inaugural release** of the Ixaris Rebates Calculator, a modern des
 - **Build System**: Webpack + Electron Builder
 
 ### System Requirements
-- **OS**: Windows 10 or Windows 11 (64-bit)
+- **OS**: macOS 12.0 Monterey or later
+- **Architecture**: Apple Silicon (M1/M2/M3) or Intel x64
 - **RAM**: 4GB minimum, 8GB recommended
 - **Storage**: 200MB free space
-- **Processor**: x64 compatible CPU
 
 ## 📋 Supported File Types
 
@@ -95,9 +95,10 @@ This is the **inaugural release** of the Ixaris Rebates Calculator, a modern des
 ## 🚀 Getting Started
 
 ### Installation
-1. Download `Ixaris Rebates Calculator 1.0.0.exe` from the release
-2. Run the executable (no installation required)
-3. Application will create necessary data files automatically
+1. Download `Ixaris Rebates Calculator-1.0.0.dmg` (Intel) or `Ixaris Rebates Calculator-1.0.0-arm64.dmg` (Apple Silicon)
+2. Open the DMG file and drag the application to your Applications folder
+3. Right-click the app and select "Open" (first time only - required for unsigned apps)
+4. Application will create necessary data files automatically
 
 ### Basic Usage
 1. **Import Data**: Load your CSV files using the Import Files page
@@ -106,6 +107,9 @@ This is the **inaugural release** of the Ixaris Rebates Calculator, a modern des
 4. **Export**: Export results for further analysis (if needed)
 
 ## 🐛 Known Issues
+
+### Platform Limitations
+- **Windows builds**: Currently unavailable due to cross-compilation issues with native SQLite dependencies. Windows support planned for v1.1.0 using alternative build environment.
 
 ### Minor Issues (To Be Addressed in Future Versions)
 - Settings page is currently under development (disabled in v1.0.0)
@@ -139,6 +143,7 @@ This is the **inaugural release** of the Ixaris Rebates Calculator, a modern des
 ## 🔮 Roadmap
 
 ### Planned for Future Versions
+- **Windows Support**: v1.1.0 - Native Windows executable using dedicated build environment
 - **Settings Configuration**: User preferences and default values
 - **Advanced Export Options**: Multiple output formats
 - **Batch Processing**: Multiple file processing
