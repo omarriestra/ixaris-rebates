@@ -13,8 +13,9 @@ jobs:
     timeout-minutes: 45
     
     strategy:
+      fail-fast: false
       matrix:
-        os: [macos-latest, windows-latest, ubuntu-latest]
+        os: [macos-latest, windows-latest]
         
     steps:
     - name: Check out Git repository
@@ -57,8 +58,6 @@ jobs:
           npm run dist:portable
         elif [ "$RUNNER_OS" == "macOS" ]; then
           npm run dist:mac
-        else
-          npx electron-builder --linux --publish never
         fi
       shell: bash
       
@@ -70,9 +69,6 @@ jobs:
           dist-electron/*.exe
           dist-electron/*.dmg
           dist-electron/*.zip
-          dist-electron/*.AppImage
-          dist-electron/*.deb
-          dist-electron/*.rpm
         retention-days: 30
         
   release:
@@ -96,9 +92,6 @@ jobs:
           artifacts/**/*.exe
           artifacts/**/*.dmg
           artifacts/**/*.zip
-          artifacts/**/*.AppImage
-          artifacts/**/*.deb
-          artifacts/**/*.rpm
         draft: false
         prerelease: false
         generate_release_notes: true
