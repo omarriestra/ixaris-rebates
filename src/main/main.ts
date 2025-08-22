@@ -104,7 +104,15 @@ ipcMain.handle('db:initialize', async () => {
 });
 
 ipcMain.handle('db:getConfiguration', async () => {
-  return await databaseManager.getConfiguration();
+  console.log('[Main] IPC db:getConfiguration called');
+  try {
+    const result = await databaseManager.getConfiguration();
+    console.log('[Main] IPC db:getConfiguration result:', result);
+    return result;
+  } catch (error) {
+    console.error('[Main] IPC db:getConfiguration error:', error);
+    throw error;
+  }
 });
 
 ipcMain.handle('db:saveConfiguration', async (event, config: any) => {
@@ -118,7 +126,15 @@ ipcMain.handle('db:getCalculatedRebates', async () => {
 });
 
 ipcMain.handle('db:getCalculatedRebatesMetadata', async () => {
-  return await databaseManager.getCalculatedRebatesMetadata();
+  console.log('[Main] IPC db:getCalculatedRebatesMetadata called');
+  try {
+    const result = await databaseManager.getCalculatedRebatesMetadata();
+    console.log('[Main] IPC db:getCalculatedRebatesMetadata result:', result);
+    return result;
+  } catch (error) {
+    console.error('[Main] IPC db:getCalculatedRebatesMetadata error:', error);
+    throw error;
+  }
 });
 
 ipcMain.handle('db:getCalculatedRebatesChunk', async (event, chunkIndex: number) => {

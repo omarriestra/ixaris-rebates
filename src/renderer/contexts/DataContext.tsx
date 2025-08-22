@@ -55,13 +55,47 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
     setExistingDataSummary(null);
   };
 
+  // Helper function to add timeout to promises
+  const withTimeout = <T,>(promise: Promise<T>, timeoutMs: number): Promise<T> => {
+    return Promise.race([
+      promise,
+      new Promise<T>((_, reject) => 
+        setTimeout(() => reject(new Error(`Operation timed out after ${timeoutMs}ms`)), timeoutMs)
+      )
+    ]);
+  };
+
   const checkExistingData = async (): Promise<void> => {
     try {
       console.log('[DataContext] Checking for existing data...');
       
-      // Get metadata about calculated rebates
-      const metadata = await window.electronAPI.db.getCalculatedRebatesMetadata();
-      const config = await window.electronAPI.db.getConfiguration();
+      // Add timeout to prevent hanging
+      const metadataPromise = withTimeout(
+        window.electronAPI.db.getCalculatedRebatesMetadata(), 
+        5000 // 5 second timeout
+      );
+      
+      const configPromise = withTimeout(
+        window.electronAPI.db.getConfiguration(), 
+        5000 // 5 second timeout
+      );
+      
+      console.log('[DataContext] Calling IPC methods...');
+      
+      // Get metadata about calculated rebates with timeout
+      const metadata = await metadataPromise.catch(err => {
+        console.error('[DataContext] Metadata call failed:', err);
+        return null;
+      });
+      
+      console.log('[DataContext] Metadata result:', metadata);
+      
+      const config = await configPromise.catch(err => {
+        console.error('[DataContext] Config call failed:', err);
+        return null;
+      });
+      
+      console.log('[DataContext] Config result:', config);
       
       if (metadata && metadata.totalRebates > 0) {
         setHasExistingData(true);
@@ -90,9 +124,12 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
           config: config
         });
       } else {
+        console.log('[DataContext] No existing data found');
         setHasExistingData(false);
         setExistingDataSummary(null);
       }
+      
+      console.log('[DataContext] checkExistingData completed successfully');
     } catch (err) {
       console.error('[DataContext] Error checking existing data:', err);
       setHasExistingData(false);

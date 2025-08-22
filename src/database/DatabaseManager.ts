@@ -290,9 +290,12 @@ export class DatabaseManager {
   }
 
   private checkInitialized(): void {
+    console.log('[DatabaseManager] Checking initialization status:', this.isInitialized);
     if (!this.isInitialized) {
+      console.error('[DatabaseManager] Database not initialized!');
       throw new Error('Database not initialized');
     }
+    console.log('[DatabaseManager] Database is initialized');
   }
 
   // Configuration methods
@@ -310,8 +313,16 @@ export class DatabaseManager {
   }
 
   async getConfiguration(): Promise<Configuration | null> {
-    this.checkInitialized();
-    return this.configurations.length > 0 ? this.configurations[0] : null;
+    console.log('[DatabaseManager] getConfiguration called');
+    try {
+      this.checkInitialized();
+      const result = this.configurations.length > 0 ? this.configurations[0] : null;
+      console.log('[DatabaseManager] getConfiguration result:', result);
+      return result;
+    } catch (error) {
+      console.error('[DatabaseManager] getConfiguration error:', error);
+      throw error;
+    }
   }
 
   async getLatestConfiguration(): Promise<Configuration | null> {
@@ -467,16 +478,23 @@ export class DatabaseManager {
 
   // Get metadata about calculated rebates without loading them all
   async getCalculatedRebatesMetadata(): Promise<{ totalRebates: number; chunks: number; chunkSize: number } | null> {
-    this.checkInitialized();
-    
+    console.log('[DatabaseManager] getCalculatedRebatesMetadata called');
     try {
+      this.checkInitialized();
+      
       const metaPath = path.join(this.dataDir, 'calculated_rebates_meta.json');
+      console.log('[DatabaseManager] Checking metadata file:', metaPath);
+      
       if (!fs.existsSync(metaPath)) {
+        console.log('[DatabaseManager] Metadata file does not exist');
         return null;
       }
       
+      console.log('[DatabaseManager] Reading metadata file...');
       const metaArray = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
-      return metaArray[0];
+      const result = metaArray[0];
+      console.log('[DatabaseManager] getCalculatedRebatesMetadata result:', result);
+      return result;
     } catch (error) {
       console.error('[DatabaseManager] Error reading metadata:', error);
       return null;
