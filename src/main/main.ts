@@ -13,6 +13,7 @@ const createWindow = (): void => {
       preload: path.join(__dirname, 'preload.js'),
     },
     title: 'Ixaris Rebates Calculator',
+    icon: path.join(__dirname, '../assets/app-icon.png'),
     show: false,
   });
 

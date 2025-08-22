@@ -426,12 +426,12 @@ export const Results: React.FC = () => {
       const exportData = dataToExport.map(row => ({
         'Provider Customer Name': row.providerCustomerName,
         'Product Name': row.productName,
-        'Merchant Name New': row.merchantNameNew || '',
+        'Merchant Name': row.merchantNameNew || '',
         'Currency': row.currency,
-        'Rebate 1 Yearly': row.rebate1Yearly || '',
-        'Transaction Amount': row.transactionAmount,
-        'Rebate Amount': row.rebateAmount,
-        'Rebate Amount EUR': row.rebateAmountEUR
+        'Rebate 1 Yearly': row.rebate1Yearly !== null ? `${row.rebate1Yearly.toFixed(3)}%` : '',
+        'Transaction Amount': row.transactionAmount.toFixed(2),
+        'Rebate Amount': row.rebateAmount.toFixed(2),
+        'Rebate Amount EUR': row.rebateAmountEUR.toFixed(2)
       }));
       
       await window.electronAPI.file.exportCSV({

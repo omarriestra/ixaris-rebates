@@ -63,7 +63,7 @@
           ]
         }
       ],
-      "icon": "assets/icon.ico",
+      "icon": "assets/app-icon.png",
       "asarUnpack": [
         "**/*.node",
         "**/node_modules/better-sqlite3/**/*"
