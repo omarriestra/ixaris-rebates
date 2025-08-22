@@ -185,4 +185,4 @@ RUNTIME_*.md
 VERIFICATION_*.md
 coe46_*.md
 Project_Description.pdf
-node_modules_old/
+node_modules_old/.npm-cache/
