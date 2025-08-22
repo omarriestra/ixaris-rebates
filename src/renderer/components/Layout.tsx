@@ -10,7 +10,11 @@ interface LayoutProps {
 }
 
 export const Layout: React.FC<LayoutProps> = ({ children }) => {
+  console.log('🏗️ [Layout] Rendering layout...');
+  console.log('🏗️ [Layout] Children received:', children);
+  
   const { progress, isProcessing } = useProgress();
+  console.log('🏗️ [Layout] Progress state:', { progress, isProcessing });
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -31,7 +35,9 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         {/* Main Content */}
         <main className="flex-1 overflow-auto">
           <div className="container mx-auto px-6 py-8">
+            {console.log('🏗️ [Layout] About to render children...')}
             {children}
+            {console.log('🏗️ [Layout] Children rendered')}
           </div>
         </main>
       </div>

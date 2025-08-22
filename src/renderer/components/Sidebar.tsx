@@ -34,8 +34,13 @@ const SidebarItem: React.FC<SidebarItemProps> = ({
   const navigate = useNavigate();
 
   const handleClick = () => {
+    console.log('🔗 [Sidebar] Item clicked:', { to, label, disabled });
     if (!disabled) {
+      console.log('🔗 [Sidebar] Navigating to:', to);
       navigate(to);
+      console.log('🔗 [Sidebar] Navigation called');
+    } else {
+      console.log('🔗 [Sidebar] Navigation blocked - item disabled');
     }
   };
 
@@ -65,9 +70,14 @@ const SidebarItem: React.FC<SidebarItemProps> = ({
 };
 
 export const Sidebar: React.FC = () => {
+  console.log('📋 [Sidebar] Rendering sidebar...');
+  
   const location = useLocation();
   const { configuration } = useConfiguration();
   const { transactionData, calculatedRebates, processingResult, hasExistingData, existingDataSummary } = useData();
+
+  console.log('📋 [Sidebar] Current location:', location.pathname);
+  console.log('📋 [Sidebar] Data state:', { hasExistingData, transactionDataLength: transactionData.length });
 
   const hasConfiguration = Boolean(configuration) || hasExistingData;
   const hasData = transactionData.length > 0 || hasExistingData;

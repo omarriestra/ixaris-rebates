@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route } from 'react-router-dom';
 import { ConfigurationProvider } from './contexts/ConfigurationContext';
 import { ProgressProvider } from './contexts/ProgressContext';
 import { DataProvider } from './contexts/DataContext';
 import { NotificationProvider } from './contexts/NotificationContext';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { Layout } from './components/Layout';
 import { Results } from './pages/Results';
 import { SimpleImport } from './pages/SimpleImport';
@@ -17,17 +18,19 @@ export const App: React.FC = () => {
   useEffect(() => {
     const initializeApp = async () => {
       try {
-        console.log('🔌 Checking for electronAPI...');
+        console.log('🔌 [App] Checking for electronAPI...');
         if (window.electronAPI) {
-          console.log('✅ ElectronAPI found, initializing database...');
+          console.log('✅ [App] ElectronAPI found, initializing database...');
           await window.electronAPI.db.initialize();
-          console.log('✅ Database initialized successfully');
+          console.log('✅ [App] Database initialized successfully');
         } else {
-          console.warn('⚠️ ElectronAPI not found, running in browser mode');
+          console.warn('⚠️ [App] ElectronAPI not found, running in browser mode');
         }
+        console.log('🎯 [App] Setting isInitialized to true...');
         setIsInitialized(true);
+        console.log('✅ [App] Initialization complete');
       } catch (error) {
-        console.error('Failed to initialize app:', error);
+        console.error('[App] Failed to initialize app:', error);
         if (window.electronAPI) {
           await window.electronAPI.error.show('Failed to initialize database');
         }
@@ -50,25 +53,41 @@ export const App: React.FC = () => {
     );
   }
 
+  console.log('🎨 [App] Rendering main app...');
+  
   return (
-    <NotificationProvider>
-      <ConfigurationProvider>
-        <DataProvider>
-          <ProgressProvider>
-            <Router>
-              <Layout>
-                <Routes>
-                  <Route path="/" element={<SimpleImport />} />
-                  <Route path="/results" element={<Results />} />
-                  <Route path="/table" element={<RebateTable />} />
-                  <Route path="/settings" element={<Settings />} />
-                  <Route path="/help" element={<Help />} />
-                </Routes>
-              </Layout>
-            </Router>
-          </ProgressProvider>
-        </DataProvider>
-      </ConfigurationProvider>
-    </NotificationProvider>
+    <ErrorBoundary>
+      <NotificationProvider>
+        <ConfigurationProvider>
+          <DataProvider>
+            <ProgressProvider>
+              <Router>
+                <Layout>
+                  <Routes>
+                    <Route path="/" element={<SimpleImport />} />
+                    <Route path="/results" element={<Results />} />
+                    <Route path="/table" element={<RebateTable />} />
+                    <Route path="/settings" element={<Settings />} />
+                    <Route path="/help" element={<Help />} />
+                    <Route path="*" element={
+                      <div className="p-8 text-center">
+                        <h2 className="text-xl font-bold text-gray-900 mb-4">Page Not Found</h2>
+                        <p className="text-gray-600">The requested page could not be found.</p>
+                        <button 
+                          onClick={() => window.location.hash = '#/'}
+                          className="mt-4 px-4 py-2 bg-primary-600 text-white rounded hover:bg-primary-700"
+                        >
+                          Go Home
+                        </button>
+                      </div>
+                    } />
+                  </Routes>
+                </Layout>
+              </Router>
+            </ProgressProvider>
+          </DataProvider>
+        </ConfigurationProvider>
+      </NotificationProvider>
+    </ErrorBoundary>
   );
 };

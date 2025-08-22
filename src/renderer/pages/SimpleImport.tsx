@@ -35,10 +35,14 @@ const initialFileStatus: FileStatus = {
 };
 
 export const SimpleImport: React.FC = () => {
+  console.log('📄 [SimpleImport] Component rendering...');
+  
   const navigate = useNavigate();
   const { addNotification } = useNotifications();
   const { setTransactionData, setCalculatedRebates, processRebates, hasExistingData, existingDataSummary } = useData();
   const { setProgress, clearProgress } = useProgress();
+  
+  console.log('📄 [SimpleImport] Hooks initialized, hasExistingData:', hasExistingData);
   
   const [importState, setImportState] = useState<ImportState>({
     transactions: { ...initialFileStatus },
@@ -493,10 +497,23 @@ export const SimpleImport: React.FC = () => {
     );
   };
 
+  console.log('📄 [SimpleImport] About to render JSX...');
+  
+  // Add a simple test to see if basic JSX renders
+  console.log('📄 [SimpleImport] Test render - checking if JSX works');
+
   return (
     <div className="max-w-4xl mx-auto">
+      {console.log('📄 [SimpleImport] Inside return JSX')}
       
-      
+      {/* Test div - simple content to verify rendering */}
+      <div className="mb-4 p-4 bg-yellow-100 border border-yellow-400 rounded">
+        <h3 className="font-bold text-yellow-800">🔧 DEBUG MODE</h3>
+        <p className="text-yellow-700">SimpleImport component is rendering successfully!</p>
+        <p className="text-sm text-yellow-600 mt-1">
+          Current time: {new Date().toLocaleTimeString()}
+        </p>
+      </div>
 
       <div className="mb-8">
         <h2 className="text-2xl font-bold text-gray-900">Import Data Files</h2>
