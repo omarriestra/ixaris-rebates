@@ -950,7 +950,8 @@ export class CsvImporter {
       .replace(/^"|"$/g, '')  // Remove quotes
       .replace('%', '');      // Remove percentage sign
     const num = parseFloat(cleaned);
-    return isNaN(num) || num === 0 ? undefined : num;
+    // Convert percentage to decimal (3.0% -> 0.03)
+    return isNaN(num) || num === 0 ? undefined : num / 100;
   }
 
   // Method to get import statistics

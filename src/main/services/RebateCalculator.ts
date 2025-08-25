@@ -264,14 +264,14 @@ export class RebateCalculator {
       const rebateRate = yearlyRate ?? monthlyRate;
       
       if (rebateRate && rebateRate > 0) {
-        const rebateAmount = Math.round((rebateRate * transaction.transactionAmount / 100) * 100) / 100;
-        const rebateAmountEUR = Math.round((rebateRate * transaction.transactionAmountEUR / 100) * 100) / 100;
+        const rebateAmount = Math.round((rebateRate * transaction.transactionAmount) * 100) / 100;
+        const rebateAmountEUR = Math.round((rebateRate * transaction.transactionAmountEUR) * 100) / 100;
 
         // DIAGNOSTIC: Log calculation details for first few rebates
         if (Math.random() < 0.005) { // Log ~0.5% of calculations for diagnosis
           console.log(`[DIAGNOSTIC] Rebate calculation:`);
           console.log(`  Level ${level}: Rate=${rebateRate}%, TxAmount=€${transaction.transactionAmountEUR}`);
-          console.log(`  Formula: ${rebateRate} * €${transaction.transactionAmountEUR} / 100 = €${rebateAmountEUR}`);
+          console.log(`  Formula: ${rebateRate} * €${transaction.transactionAmountEUR} = €${rebateAmountEUR}`);
           console.log(`  Yearly Rate: ${yearlyRate}, Monthly Rate: ${monthlyRate}`);
         }
 
@@ -364,8 +364,8 @@ export class RebateCalculator {
       const rebateRate = yearlyRate ?? monthlyRate;
       
       if (rebateRate && rebateRate > 0) {
-        const rebateAmount = Math.round((rebateRate * transaction.transactionAmount / 100) * 100) / 100;
-        const rebateAmountEUR = Math.round((rebateRate * transaction.transactionAmountEUR / 100) * 100) / 100;
+        const rebateAmount = Math.round((rebateRate * transaction.transactionAmount) * 100) / 100;
+        const rebateAmountEUR = Math.round((rebateRate * transaction.transactionAmountEUR) * 100) / 100;
 
         rebates.push({
           transactionId: transaction.transactionId,
@@ -411,8 +411,8 @@ export class RebateCalculator {
         
         // If VoyagePrive has a yearly rate, use it
         if (yearlyRateFromVP !== null && yearlyRateFromVP !== undefined && yearlyRateFromVP > 0) {
-          const newRebateAmount = Math.round((yearlyRateFromVP * transaction.transactionAmount / 100) * 100) / 100;
-          const newRebateAmountEUR = Math.round((yearlyRateFromVP * transaction.transactionAmountEUR / 100) * 100) / 100;
+          const newRebateAmount = Math.round((yearlyRateFromVP * transaction.transactionAmount) * 100) / 100;
+          const newRebateAmountEUR = Math.round((yearlyRateFromVP * transaction.transactionAmountEUR) * 100) / 100;
           
           return {
             ...rebate,
@@ -433,8 +433,8 @@ export class RebateCalculator {
           const yearlyRate = matchingRebate[`rebate_${level}_yearly` as keyof typeof matchingRebate] as number;
           
           if (yearlyRate && yearlyRate > 0) {
-            const rebateAmount = Math.round((yearlyRate * transaction.transactionAmount / 100) * 100) / 100;
-            const rebateAmountEUR = Math.round((yearlyRate * transaction.transactionAmountEUR / 100) * 100) / 100;
+            const rebateAmount = Math.round((yearlyRate * transaction.transactionAmount) * 100) / 100;
+            const rebateAmountEUR = Math.round((yearlyRate * transaction.transactionAmountEUR) * 100) / 100;
 
             modifiedRebates.push({
               transactionId: transaction.transactionId,
@@ -517,8 +517,8 @@ export class RebateCalculator {
           
           // If region/country has a yearly rate, use it
           if (yearlyRateFromRule !== null && yearlyRateFromRule !== undefined) {
-            const newRebateAmount = Math.round((yearlyRateFromRule * transaction.transactionAmount / 100) * 100) / 100;
-            const newRebateAmountEUR = Math.round((yearlyRateFromRule * transaction.transactionAmountEUR / 100) * 100) / 100;
+            const newRebateAmount = Math.round((yearlyRateFromRule * transaction.transactionAmount) * 100) / 100;
+            const newRebateAmountEUR = Math.round((yearlyRateFromRule * transaction.transactionAmountEUR) * 100) / 100;
             
             return {
               ...rebate,
@@ -912,8 +912,8 @@ export class RebateCalculator {
 
       // Validate rebate calculations
       for (const rebate of rebates) {
-        const expectedAmount = Math.round((rebate.rebate_percentage! * transaction.transactionAmount / 100) * 100) / 100;
-        const expectedAmountEUR = Math.round((rebate.rebate_percentage! * transaction.transactionAmountEUR / 100) * 100) / 100;
+        const expectedAmount = Math.round((rebate.rebate_percentage! * transaction.transactionAmount) * 100) / 100;
+        const expectedAmountEUR = Math.round((rebate.rebate_percentage! * transaction.transactionAmountEUR) * 100) / 100;
 
         if (Math.abs((rebate.rebate_amount || 0) - expectedAmount) > 0.01) {
           result.isValid = false;

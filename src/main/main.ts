@@ -24,9 +24,6 @@ const createWindow = (): void => {
   } else {
     mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
   }
-  
-  // Always open DevTools for debugging
-  mainWindow.webContents.openDevTools();
 
   mainWindow.once('ready-to-show', () => {
     console.log('🎉 Complete app ready');
