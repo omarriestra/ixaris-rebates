@@ -505,15 +505,6 @@ export const SimpleImport: React.FC = () => {
   return (
     <div className="max-w-4xl mx-auto">
       {console.log('📄 [SimpleImport] Inside return JSX')}
-      
-      {/* Test div - simple content to verify rendering */}
-      <div className="mb-4 p-4 bg-yellow-100 border border-yellow-400 rounded">
-        <h3 className="font-bold text-yellow-800">🔧 DEBUG MODE</h3>
-        <p className="text-yellow-700">SimpleImport component is rendering successfully!</p>
-        <p className="text-sm text-yellow-600 mt-1">
-          Current time: {new Date().toLocaleTimeString()}
-        </p>
-      </div>
 
       <div className="mb-8">
         <h2 className="text-2xl font-bold text-gray-900">Import Data Files</h2>
