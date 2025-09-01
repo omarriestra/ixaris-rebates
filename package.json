@@ -5,6 +5,9 @@
   "main": "dist/main/main.js",
   "scripts": {
     "start": "electron .",
+    "build:main": "npx tsc -p tsconfig.main.json",
+    "build:all": "npm run build && npm run build:main",
+    "start:prod": "npm run build:all && electron .",
     "dev": "concurrently \"npm run dev:react\" \"wait-on http://localhost:3001 && ELECTRON_IS_DEV=true electron .\"",
     "dev:react": "webpack serve --mode=development --config webpack.renderer.config.js",
     "build": "npx webpack --mode=production --config webpack.renderer.config.js",
