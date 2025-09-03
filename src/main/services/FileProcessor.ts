@@ -1081,8 +1081,28 @@ export class FileProcessor {
 
   private parseNumber(value: any): number {
     if (value === null || value === undefined || value === '') return 0;
-    const num = Number(value);
-    return isNaN(num) ? 0 : num;
+    try {
+      // Normalize string and handle common locale formats and NBSP
+      let s = String(value).trim().replace(/\u00A0/g, '').replace(/\s+/g, '');
+      if (s === '') return 0;
+      // Detect decimal separator when both present
+      if (s.includes(',') && s.includes('.')) {
+        if (s.lastIndexOf(',') > s.lastIndexOf('.')) {
+          // 1.234.567,89 -> 1234567.89
+          s = s.replace(/\./g, '').replace(',', '.');
+        } else {
+          // 1,234,567.89 -> 1234567.89
+          s = s.replace(/,/g, '');
+        }
+      } else if (s.includes(',')) {
+        // 1234,56 -> 1234.56
+        s = s.replace(',', '.');
+      }
+      const num = Number(s);
+      return isNaN(num) ? 0 : num;
+    } catch {
+      return 0;
+    }
   }
 
   private parseDate(value: any): string {

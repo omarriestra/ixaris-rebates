@@ -27,6 +27,7 @@ interface GroupedRebateRow {
 }
 
 // Función para obtener "Merchant Name New" (procesado con MCC 4511)
+// Función para obtener "Merchant Name New" (procesado con MCC 4511)
 function getMerchantNameNew(rebate: CalculatedRebate): string {
   const originalTransaction = rebate.originalTransaction;
   if (!originalTransaction) return rebate.originalTransaction?.merchantName || '';
@@ -200,7 +201,7 @@ export const Results: React.FC = () => {
       // Sumar todos los rebates del grupo
       const totalAmount = rebates.reduce((sum, r) => sum + r.rebateAmount, 0);
       const totalAmountEUR = rebates.reduce((sum, r) => sum + r.rebateAmountEUR, 0);
-      const totalTransactionAmount = rebates.reduce((sum, r) => sum + (r.originalTransaction?.transactionAmount || 0), 0);
+      const totalTransactionAmountEUR = rebates.reduce((sum, r) => sum + (r.originalTransaction?.transactionAmountEUR || 0), 0);
       
       // Obtener rate del primer rebate level 1 (como en tu Excel)
       const level1Rebate = rebates.find(r => r.rebateLevel === 1);
@@ -216,7 +217,8 @@ export const Results: React.FC = () => {
         merchantNameNew: merchant,
         currency,
         rebate1Yearly,
-        transactionAmount: totalTransactionAmount,
+        // Mostrar importe de transacción en EUR en la tabla agrupada
+        transactionAmount: totalTransactionAmountEUR,
         rebateAmount: totalAmount,
         rebateAmountEUR: totalAmountEUR,
         originalRebates: rebates
@@ -360,16 +362,16 @@ export const Results: React.FC = () => {
     },
     {
       key: 'transactionAmount',
-      header: 'Transaction Amount',
+      header: 'Transaction Amount in EUR',
       width: '140px',
       align: 'right',
       sortable: true,
       render: (value: number, row: GroupedRebateRow) => {
         const formatted = new Intl.NumberFormat('en-US', {
           style: 'currency',
-          currency: row.currency || 'EUR',
+          currency: 'EUR',
           minimumFractionDigits: 2,
-        }).format(Math.abs(value));
+        }).format(value);
         return (
           <span className={row.isGrandTotal ? 'text-blue-600 font-bold' : 'text-gray-900'}>
             {row.isGrandTotal ? '-' : formatted}
@@ -388,7 +390,7 @@ export const Results: React.FC = () => {
           style: 'currency',
           currency: row.currency || 'EUR',
           minimumFractionDigits: 2,
-        }).format(Math.abs(value));
+        }).format(value);
         return (
           <span className={row.isGrandTotal ? 'text-blue-600 font-bold text-lg' : 'text-gray-900'}>
             {formatted}
@@ -407,7 +409,7 @@ export const Results: React.FC = () => {
           style: 'currency',
           currency: 'EUR',
           minimumFractionDigits: 2,
-        }).format(Math.abs(value));
+        }).format(value);
         return (
           <span className={row.isGrandTotal ? 'text-blue-600 font-bold text-lg' : 'text-green-600 font-medium'}>
             {formatted}
@@ -422,14 +424,14 @@ export const Results: React.FC = () => {
     const dataToExport = selectedRows.length > 0 ? selectedRows : filteredData.filter(row => !row.isGrandTotal);
     
     try {
-      // Convert grouped data to export format
+      // Convert grouped data to export format (use Transaction Amount in EUR)
       const exportData = dataToExport.map(row => ({
         'Provider Customer Name': row.providerCustomerName,
         'Product Name': row.productName,
         'Merchant Name New': row.merchantNameNew || '',
         'Currency': row.currency,
         'Rebate 1 Yearly': row.rebate1Yearly || '',
-        'Transaction Amount': row.transactionAmount,
+        'Transaction Amount in EUR': row.transactionAmount,
         'Rebate Amount': row.rebateAmount,
         'Rebate Amount EUR': row.rebateAmountEUR
       }));
@@ -449,14 +451,14 @@ export const Results: React.FC = () => {
     const dataToExport = selectedRows.length > 0 ? selectedRows : filteredData;
     
     try {
-      // Convert grouped data to export format with Grand Total
+      // Convert grouped data to export format with Grand Total (EUR transaction amount)
       const exportData = dataToExport.map(row => ({
         'Provider Customer Name': row.providerCustomerName,
         'Product Name': row.productName,
         'Merchant Name New': row.merchantNameNew || '',
         'Currency': row.currency,
         'Rebate 1 Yearly': row.rebate1Yearly !== null ? `${row.rebate1Yearly.toFixed(3)}%` : '',
-        'Transaction Amount': row.isGrandTotal ? '' : row.transactionAmount.toFixed(2),
+        'Transaction Amount in EUR': row.isGrandTotal ? '' : row.transactionAmount.toFixed(2),
         'Rebate Amount': row.rebateAmount.toFixed(2),
         'Rebate Amount EUR': row.rebateAmountEUR.toFixed(2)
       }));
@@ -646,16 +648,19 @@ export const Results: React.FC = () => {
                       const transactionData = await window.electronAPI.db.getTransactionData();
                       console.log(`[Results] Loaded ${transactionData.length} transactions`);
                       
-                      // Create map for fast lookup of transaction amounts
+                      // Create maps for fast lookup of transaction amounts (base) and EUR
                       const transactionMap = new Map<string, number>();
+                      const transactionEURMap = new Map<string, number>();
                       transactionData.forEach(tx => {
                         const txId = tx.transaction_id || tx.transactionId;
-                        const amount = tx.transaction_amount || tx.transactionAmount || 0;
+                        const amountBase = tx.transaction_amount || tx.transactionAmount || 0;
+                        const amountEUR = tx.transaction_amount_eur || tx.transactionAmountEUR || 0;
                         if (txId) {
-                          transactionMap.set(txId, Math.abs(amount)); // Use absolute value
+                          transactionMap.set(txId, amountBase);
+                          transactionEURMap.set(txId, amountEUR);
                         }
                       });
-                      console.log(`[Results] Created transaction lookup map with ${transactionMap.size} entries`);
+                      console.log(`[Results] Created transaction lookup maps with ${transactionMap.size} entries`);
                       
                       // Create map for fast lookup of merchant names
                       console.log('[Results] Creating merchant lookup map...');
@@ -701,12 +706,14 @@ export const Results: React.FC = () => {
                             groups.set(key, []);
                           }
                           
-                          // Add transaction amount from lookup
+                          // Add transaction amounts from lookups
                           const transactionAmount = transactionId ? (transactionMap.get(transactionId) || 0) : 0;
+                          const transactionAmountEUR = transactionId ? (transactionEURMap.get(transactionId) || 0) : 0;
                           
                           groups.get(key)!.push({
                             ...rebate,
                             transactionAmount: transactionAmount,
+                            transactionAmountEUR: transactionAmountEUR,
                             merchantName: merchantName
                           });
                         });
@@ -737,10 +744,10 @@ export const Results: React.FC = () => {
                           return sum + amountEUR;
                         }, 0);
                         
-                        // Sum transaction amounts (now populated from lookup)
+                        // Sum transaction amounts in EUR (match Excel 'Transaction Amount in EUR')
                         const totalTransactionAmount = rebates.reduce((sum, r) => {
-                          const amount = r.transactionAmount || 0;
-                          return sum + amount;
+                          const amountEUR = (r as any).transactionAmountEUR || 0;
+                          return sum + amountEUR;
                         }, 0);
                         
                         // Get rate from first level 1 rebate
@@ -761,10 +768,10 @@ export const Results: React.FC = () => {
                           'Merchant Name': merchant || '', // Now available from merchant lookup
                           'Currency': currency,
                           'Rebate 1 Yearly': rebate1Yearly !== null ? `${rebate1Yearly.toFixed(3)}%` : '',
-                          'Transaction Amount': totalTransactionAmount.toFixed(2),
-                          'Rebate Amount': totalAmount.toFixed(2),
-                          'Rebate Amount EUR': totalAmountEUR.toFixed(2)
-                        });
+                           'Transaction Amount in EUR': totalTransactionAmount.toFixed(2),
+                           'Rebate Amount': totalAmount.toFixed(2),
+                           'Rebate Amount EUR': totalAmountEUR.toFixed(2)
+                         });
                         
                         grandTotalAmount += totalAmount;
                         grandTotalAmountEUR += totalAmountEUR;
@@ -772,16 +779,16 @@ export const Results: React.FC = () => {
                       });
                       
                       // Add grand total row
-                      exportData.push({
-                        'Provider Customer Name': 'Grand Total',
+                       exportData.push({
+                         'Provider Customer Name': 'Grand Total',
                         'Product Name': '',
                         'Merchant Name': '',
                         'Currency': '',
                         'Rebate 1 Yearly': '',
-                        'Transaction Amount': grandTotalTransactionAmount.toFixed(2),
-                        'Rebate Amount': grandTotalAmount.toFixed(2),
-                        'Rebate Amount EUR': grandTotalAmountEUR.toFixed(2)
-                      });
+                         'Transaction Amount in EUR': grandTotalTransactionAmount.toFixed(2),
+                         'Rebate Amount': grandTotalAmount.toFixed(2),
+                         'Rebate Amount EUR': grandTotalAmountEUR.toFixed(2)
+                       });
                       
                       // Export to Excel
                       await window.electronAPI.file.exportExcel({
@@ -793,17 +800,17 @@ export const Results: React.FC = () => {
                       console.log(`[Results] Successfully exported ${exportData.length - 1} grouped results plus grand total`);
                       
                       // Cache export data for Detailed Table (excluding grand total row)
-                      const detailedTableData = exportData.slice(0, -1).map((row, index) => ({
-                        id: `export-${index}`,
-                        providerCustomerName: row['Provider Customer Name'],
-                        productName: row['Product Name'],
-                        merchantName: row['Merchant Name'] || '-',
-                        currency: row['Currency'],
-                        rebate1Yearly: row['Rebate 1 Yearly'] ? parseFloat(row['Rebate 1 Yearly'].replace('%', '')) : null,
-                        transactionAmount: parseFloat(row['Transaction Amount']),
-                        rebateAmount: parseFloat(row['Rebate Amount']),
-                        rebateAmountEUR: parseFloat(row['Rebate Amount EUR'])
-                      }));
+                       const detailedTableData = exportData.slice(0, -1).map((row, index) => ({
+                         id: `export-${index}`,
+                         providerCustomerName: row['Provider Customer Name'],
+                         productName: row['Product Name'],
+                         merchantName: row['Merchant Name'] || '-',
+                         currency: row['Currency'],
+                         rebate1Yearly: row['Rebate 1 Yearly'] ? parseFloat(row['Rebate 1 Yearly'].replace('%', '')) : null,
+                         transactionAmount: parseFloat(row['Transaction Amount in EUR']),
+                         rebateAmount: parseFloat(row['Rebate Amount']),
+                         rebateAmountEUR: parseFloat(row['Rebate Amount EUR'])
+                       }));
                       
                       localStorage.setItem('detailedTableData', JSON.stringify({
                         data: detailedTableData,

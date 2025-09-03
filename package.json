@@ -1,6 +1,6 @@
 {
   "name": "ixaris-rebates-calculator",
-  "version": "1.0.0",
+  "version": "1.1.1",
   "description": "Modern desktop application for calculating Ixaris rebates",
   "main": "dist/main/main.js",
   "scripts": {
@@ -160,3 +160,4 @@
     "calculator"
   ]
 }
+
