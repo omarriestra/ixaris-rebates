@@ -1,0 +1,51 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Tag to release (e.g., v1.2.0)
+        required: true
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine tag
+        id: tag
+        run: |
+          if [ -n "${{ github.event.inputs.tag }}" ]; then
+            TAG="${{ github.event.inputs.tag }}"
+          else
+            TAG="${GITHUB_REF##*/}"
+          fi
+          echo "TAG=$TAG" >> $GITHUB_ENV
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+      - name: Determine release notes path
+        id: notes
+        run: |
+          FILE="RELEASE_NOTES_${TAG}.md"
+          if [ -f "$FILE" ]; then
+            echo "RELEASE_NOTES_PATH=$FILE" >> $GITHUB_ENV
+          else
+            echo "RELEASE_NOTES_PATH=CHANGELOG.md" >> $GITHUB_ENV
+          fi
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.TAG }}
+          name: Ixaris Rebates Calculator ${{ env.TAG }}
+          body_path: ${{ env.RELEASE_NOTES_PATH }}
+          draft: false
+          prerelease: false
+
