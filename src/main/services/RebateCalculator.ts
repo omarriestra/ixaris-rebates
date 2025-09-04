@@ -53,11 +53,18 @@ export class RebateCalculator {
     };
 
     try {
-      // Get all transaction data
+      // Get transaction data (supports chunked datasets)
       this.updateProgress('calculation', 10, 'Loading transaction data...');
-      const transactions = await this.databaseManager.getTransactionData();
-      result.transactionsProcessed = transactions.length;
-      result.summary.totalTransactions = transactions.length;
+      const txnMeta = await (this.databaseManager as any).getTransactionDataMetadata?.();
+      let transactions = await this.databaseManager.getTransactionData();
+      let totalTx = transactions.length;
+      let useChunks = false;
+      if (txnMeta && txnMeta.totalTransactions && txnMeta.totalTransactions > 100000) {
+        useChunks = true;
+        totalTx = txnMeta.totalTransactions;
+      }
+      result.transactionsProcessed = totalTx;
+      result.summary.totalTransactions = totalTx;
 
       // Load lookup data
       this.updateProgress('calculation', 20, 'Loading rebate lookup data...');
@@ -65,7 +72,7 @@ export class RebateCalculator {
       const partnerPayRebates = await this.databaseManager.getPartnerPayRebates();
 
       console.log(`[RebateCalculator] Loaded rebate configuration:`);
-      console.log(`  - Transactions to process: ${transactions.length}`);
+      console.log(`  - Transactions to process: ${totalTx}`);
       console.log(`  - Visa/MCO rebates: ${visaMCORebates.length}`);
       console.log(`  - PartnerPay rebates: ${partnerPayRebates.length}`);
 
@@ -76,45 +83,55 @@ export class RebateCalculator {
       const calculatedRebates: CalculatedRebate[] = [];
       let processed = 0;
 
-      // Convert database records to application format
-      const appTransactions: TransactionRecord[] = transactions.map(dbTxn => ({
-        transactionCardNumber: dbTxn.transaction_card_number,
-        transactionCurrency: dbTxn.transaction_currency,
-        providerCustomerCode: dbTxn.provider_customer_code,
-        transactionType: dbTxn.transaction_type,
-        transactionCard: dbTxn.transaction_card,
-        salesforceProductName: dbTxn.salesforce_product_name,
-        fundingAccountName: dbTxn.funding_account_name,
-        region: dbTxn.region,
-        regionMC: dbTxn.region_mc,
-        transactionDate: dbTxn.transaction_date,
-        binCardNumber: dbTxn.bin_card_number,
-        transactionAmount: dbTxn.transaction_amount,
-        interchangeAmount: dbTxn.interchange_amount,
-        interchangePercentage: dbTxn.interchange_percentage,
-        transactionId: dbTxn.transaction_id,
-        transactionAmountEUR: dbTxn.transaction_amount_eur,
-        fxRate: dbTxn.fx_rate,
-        pkReference: dbTxn.pk_reference,
-        transactionMerchantCountry: dbTxn.transaction_merchant_country,
-        transactionMerchantCategoryCode: dbTxn.transaction_merchant_category_code,
-        merchantName: dbTxn.merchant_name,
-        transactionMerchantName: dbTxn.transaction_merchant_name
-      }));
+      const processDbTransactions = async (dbTxns: any[]) => {
+        const appTransactions: TransactionRecord[] = dbTxns.map(dbTxn => ({
+          transactionCardNumber: dbTxn.transaction_card_number,
+          transactionCurrency: dbTxn.transaction_currency,
+          providerCustomerCode: dbTxn.provider_customer_code,
+          transactionType: dbTxn.transaction_type,
+          transactionCard: dbTxn.transaction_card,
+          salesforceProductName: dbTxn.salesforce_product_name,
+          fundingAccountName: dbTxn.funding_account_name,
+          region: dbTxn.region,
+          regionMC: dbTxn.region_mc,
+          transactionDate: dbTxn.transaction_date,
+          binCardNumber: dbTxn.bin_card_number,
+          transactionAmount: dbTxn.transaction_amount,
+          interchangeAmount: dbTxn.interchange_amount,
+          interchangePercentage: dbTxn.interchange_percentage,
+          transactionId: dbTxn.transaction_id,
+          transactionAmountEUR: dbTxn.transaction_amount_eur,
+          fxRate: dbTxn.fx_rate,
+          pkReference: dbTxn.pk_reference,
+          transactionMerchantCountry: dbTxn.transaction_merchant_country,
+          transactionMerchantCategoryCode: dbTxn.transaction_merchant_category_code,
+          merchantName: dbTxn.merchant_name,
+          transactionMerchantName: dbTxn.transaction_merchant_name
+        }));
 
-      for (const transaction of appTransactions) {
-        try {
-          const rebates = await this.calculateTransactionRebates(transaction, visaMCORebates, partnerPayRebates);
-          calculatedRebates.push(...rebates);
-          
-          processed++;
-          if (processed % 100 === 0) {
-            const percentage = 20 + (processed / appTransactions.length) * 60;
-            this.updateProgress('calculation', percentage, `Processing transaction ${processed} of ${appTransactions.length}...`);
+        for (const transaction of appTransactions) {
+          try {
+            const rebates = await this.calculateTransactionRebates(transaction, visaMCORebates, partnerPayRebates);
+            calculatedRebates.push(...rebates);
+            processed++;
+            if (processed % 1000 === 0 || processed === totalTx) {
+              const denominator = totalTx > 0 ? totalTx : processed;
+              const percentage = 20 + (processed / denominator) * 60;
+              this.updateProgress('calculation', Math.min(80, Math.floor(percentage)), `Processing transaction ${processed} of ${denominator}...`);
+            }
+          } catch (error) {
+            result.errors.push(`Error processing transaction ${transaction.transactionId}: ${(error as Error).message}`);
           }
-        } catch (error) {
-          result.errors.push(`Error processing transaction ${transaction.transactionId}: ${(error as Error).message}`);
         }
+      };
+
+      if (useChunks && txnMeta) {
+        for (let i = 0; i < txnMeta.chunks; i++) {
+          const dbChunk = await (this.databaseManager as any).getTransactionDataChunk(i);
+          await processDbTransactions(dbChunk || []);
+        }
+      } else {
+        await processDbTransactions(transactions);
       }
 
       // Store calculated rebates - convert to database format

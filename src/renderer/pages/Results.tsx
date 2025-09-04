@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useData } from '../contexts/DataContext';
 import { useNotifications } from '../contexts/NotificationContext';
@@ -78,6 +78,77 @@ export const Results: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(100); // Más filas para ver datos agrupados
   const [isExporting, setIsExporting] = useState(false);
+  // Lookup maps for large datasets (built chunk-by-chunk)
+  const txEURMapRef = useRef<Map<string, number>>(new Map());
+  const merchantMapRef = useRef<Map<string, string>>(new Map());
+  const [lookupsReady, setLookupsReady] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    const buildLookups = async () => {
+      try {
+        setLookupsReady(false);
+        // Try small dataset path first
+        const txSmall = await window.electronAPI.db.getTransactionData();
+        if (txSmall && txSmall.length > 0) {
+          const eurMap = new Map<string, number>();
+          const merchMap = new Map<string, string>();
+          txSmall.forEach((tx: any) => {
+            const txId = tx.transaction_id || tx.transactionId;
+            if (!txId) return;
+            const amountEUR = tx.transaction_amount_eur || tx.transactionAmountEUR || 0;
+            eurMap.set(txId, amountEUR);
+            const mockRebate: any = { originalTransaction: {
+              merchantName: tx.merchant_name || '',
+              transactionMerchantName: tx.transaction_merchant_name || '',
+              transactionMerchantCategoryCode: tx.transaction_merchant_category_code || 0
+            }};
+            merchMap.set(txId, getMerchantNameNew(mockRebate));
+          });
+          if (!cancelled) {
+            txEURMapRef.current = eurMap;
+            merchantMapRef.current = merchMap;
+            setLookupsReady(true);
+          }
+          return;
+        }
+
+        // Large dataset: build maps from chunks
+        const meta = await window.electronAPI.db.getTransactionDataMetadata();
+        if (meta && meta.totalTransactions > 0) {
+          const eurMap = new Map<string, number>();
+          const merchMap = new Map<string, string>();
+          for (let i = 0; i < meta.chunks; i++) {
+            const chunk = await window.electronAPI.db.getTransactionDataChunk(i);
+            chunk.forEach((tx: any) => {
+              const txId = tx.transaction_id || tx.transactionId;
+              if (!txId) return;
+              const amountEUR = tx.transaction_amount_eur || tx.transactionAmountEUR || 0;
+              eurMap.set(txId, amountEUR);
+              const mockRebate: any = { originalTransaction: {
+                merchantName: tx.merchant_name || '',
+                transactionMerchantName: tx.transaction_merchant_name || '',
+                transactionMerchantCategoryCode: tx.transaction_merchant_category_code || 0
+              }};
+              merchMap.set(txId, getMerchantNameNew(mockRebate));
+            });
+          }
+          if (!cancelled) {
+            txEURMapRef.current = eurMap;
+            merchantMapRef.current = merchMap;
+            setLookupsReady(true);
+          }
+        } else {
+          if (!cancelled) setLookupsReady(true);
+        }
+      } catch (e) {
+        console.error('[Results] Failed to build transaction lookups:', e);
+        if (!cancelled) setLookupsReady(true);
+      }
+    };
+    buildLookups();
+    return () => { cancelled = true; };
+  }, []);
 
   // Load calculation summary on mount
   useEffect(() => {
@@ -181,7 +252,13 @@ export const Results: React.FC = () => {
     
     // Agrupar por Provider + Product + Merchant
     calculatedRebates.forEach(rebate => {
-      const merchantNameNew = getMerchantNameNew(rebate);
+      let merchantNameNew = getMerchantNameNew(rebate);
+      if (!merchantNameNew) {
+        const txId = (rebate as any).transactionId || (rebate as any).transaction_id;
+        if (txId) {
+          merchantNameNew = merchantMapRef.current.get(txId) || '';
+        }
+      }
       const key = `${rebate.providerCustomerCode}|${rebate.productName}|${merchantNameNew}`;
       
       if (!groups.has(key)) {
@@ -201,7 +278,18 @@ export const Results: React.FC = () => {
       // Sumar todos los rebates del grupo
       const totalAmount = rebates.reduce((sum, r) => sum + r.rebateAmount, 0);
       const totalAmountEUR = rebates.reduce((sum, r) => sum + r.rebateAmountEUR, 0);
-      const totalTransactionAmountEUR = rebates.reduce((sum, r) => sum + (r.originalTransaction?.transactionAmountEUR || 0), 0);
+      // Prefer lookup map when originalTransaction is not available (large datasets)
+      // IMPORTANT: Sum unique transactions only (not per rebate level)
+      const seenTx = new Set<string>();
+      const totalTransactionAmountEUR = rebates.reduce((sum, r) => {
+        const txId = (r as any).transactionId || (r as any).transaction_id || r.transactionId;
+        if (!txId || seenTx.has(txId)) return sum;
+        seenTx.add(txId);
+        const fromOriginal = r.originalTransaction?.transactionAmountEUR || 0;
+        if (fromOriginal) return sum + fromOriginal;
+        const fromMap = txEURMapRef.current.get(txId) || 0;
+        return sum + fromMap;
+      }, 0);
       
       // Obtener rate del primer rebate level 1 (como en tu Excel)
       const level1Rebate = rebates.find(r => r.rebateLevel === 1);
@@ -643,44 +731,52 @@ export const Results: React.FC = () => {
                         duration: 0, // Don't auto-dismiss
                       });
                       
-                      // Load transaction data for joins
-                      console.log('[Results] Loading transaction data for amounts...');
-                      const transactionData = await window.electronAPI.db.getTransactionData();
-                      console.log(`[Results] Loaded ${transactionData.length} transactions`);
-                      
-                      // Create maps for fast lookup of transaction amounts (base) and EUR
+                      // Build lookup maps for transactions (supports chunked datasets)
+                      console.log('[Results] Building transaction lookup maps...');
                       const transactionMap = new Map<string, number>();
                       const transactionEURMap = new Map<string, number>();
-                      transactionData.forEach(tx => {
-                        const txId = tx.transaction_id || tx.transactionId;
-                        const amountBase = tx.transaction_amount || tx.transactionAmount || 0;
-                        const amountEUR = tx.transaction_amount_eur || tx.transactionAmountEUR || 0;
-                        if (txId) {
+                      const merchantMap = new Map<string, string>();
+
+                      const txSmall = await window.electronAPI.db.getTransactionData();
+                      if (txSmall && txSmall.length > 0) {
+                        txSmall.forEach((tx: any) => {
+                          const txId = tx.transaction_id || tx.transactionId;
+                          if (!txId) return;
+                          const amountBase = tx.transaction_amount || tx.transactionAmount || 0;
+                          const amountEUR = tx.transaction_amount_eur || tx.transactionAmountEUR || 0;
                           transactionMap.set(txId, amountBase);
                           transactionEURMap.set(txId, amountEUR);
+                          const mockRebate: any = { originalTransaction: {
+                            merchantName: tx.merchant_name || '',
+                            transactionMerchantName: tx.transaction_merchant_name || '',
+                            transactionMerchantCategoryCode: tx.transaction_merchant_category_code || 0
+                          }};
+                          merchantMap.set(txId, getMerchantNameNew(mockRebate));
+                        });
+                      } else {
+                        const txMeta = await window.electronAPI.db.getTransactionDataMetadata();
+                        if (txMeta && txMeta.totalTransactions > 0) {
+                          for (let i = 0; i < txMeta.chunks; i++) {
+                            const chunk = await window.electronAPI.db.getTransactionDataChunk(i);
+                            chunk.forEach((tx: any) => {
+                              const txId = tx.transaction_id || tx.transactionId;
+                              if (!txId) return;
+                              const amountBase = tx.transaction_amount || tx.transactionAmount || 0;
+                              const amountEUR = tx.transaction_amount_eur || tx.transactionAmountEUR || 0;
+                              transactionMap.set(txId, amountBase);
+                              transactionEURMap.set(txId, amountEUR);
+                              const mockRebate: any = { originalTransaction: {
+                                merchantName: tx.merchant_name || '',
+                                transactionMerchantName: tx.transaction_merchant_name || '',
+                                transactionMerchantCategoryCode: tx.transaction_merchant_category_code || 0
+                              }};
+                              merchantMap.set(txId, getMerchantNameNew(mockRebate));
+                            });
+                            if ((i + 1) % 5 === 0) console.log(`[Results] Processed ${i + 1}/${txMeta.chunks} transaction chunks`);
+                          }
                         }
-                      });
-                      console.log(`[Results] Created transaction lookup maps with ${transactionMap.size} entries`);
-                      
-                      // Create map for fast lookup of merchant names
-                      console.log('[Results] Creating merchant lookup map...');
-                      const merchantMap = new Map<string, string>();
-                      transactionData.forEach(tx => {
-                        const txId = tx.transaction_id || tx.transactionId;
-                        if (txId) {
-                          // Create a mock CalculatedRebate object to use getMerchantNameNew function
-                          const mockRebate = {
-                            originalTransaction: {
-                              merchantName: tx.merchant_name || '',
-                              transactionMerchantName: tx.transaction_merchant_name || '',
-                              transactionMerchantCategoryCode: tx.transaction_merchant_category_code || 0
-                            }
-                          };
-                          const merchantName = getMerchantNameNew(mockRebate as any);
-                          merchantMap.set(txId, merchantName);
-                        }
-                      });
-                      console.log(`[Results] Created merchant lookup map with ${merchantMap.size} entries`);
+                      }
+                      console.log(`[Results] Transaction lookup maps ready: ${transactionMap.size} IDs`);
                       
                       // Group rebates by provider/product/merchant for summary export
                       const groups = new Map<string, any[]>();
@@ -744,8 +840,12 @@ export const Results: React.FC = () => {
                           return sum + amountEUR;
                         }, 0);
                         
-                        // Sum transaction amounts in EUR (match Excel 'Transaction Amount in EUR')
+                        // Sum transaction amounts in EUR (unique by transactionId)
+                        const seenTx = new Set<string>();
                         const totalTransactionAmount = rebates.reduce((sum, r) => {
+                          const txId = r.transactionId || r.transaction_id;
+                          if (!txId || seenTx.has(txId)) return sum;
+                          seenTx.add(txId);
                           const amountEUR = (r as any).transactionAmountEUR || 0;
                           return sum + amountEUR;
                         }, 0);

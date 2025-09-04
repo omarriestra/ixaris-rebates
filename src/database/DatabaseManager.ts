@@ -340,19 +340,126 @@ export class DatabaseManager {
       processed_at: new Date().toISOString()
     }));
     
-    this.transactionData = processedTransactions;
-    await this.saveJsonFile('transaction_data.json', this.transactionData);
+    const CHUNK_SIZE = 50000;
+    if (processedTransactions.length > CHUNK_SIZE) {
+      const chunks: TransactionData[][] = [];
+      for (let i = 0; i < processedTransactions.length; i += CHUNK_SIZE) {
+        chunks.push(processedTransactions.slice(i, i + CHUNK_SIZE));
+      }
+      console.log(`[DatabaseManager] Saving ${processedTransactions.length} transactions in ${chunks.length} chunks...`);
+      for (let i = 0; i < chunks.length; i++) {
+        await this.saveJsonFile(`transaction_data_${i}.json`, chunks[i]);
+        console.log(`[DatabaseManager] Saved transactions chunk ${i + 1}/${chunks.length} (${chunks[i].length} rows)`);
+      }
+      await this.saveJsonFile('transaction_data_meta.json', [{
+        totalTransactions: processedTransactions.length,
+        chunks: chunks.length,
+        chunkSize: CHUNK_SIZE,
+        createdAt: new Date().toISOString()
+      }]);
+      // Keep memory small for very large datasets
+      this.transactionData = [];
+    } else {
+      this.transactionData = processedTransactions;
+      await this.saveJsonFile('transaction_data.json', this.transactionData);
+      // Clean old chunk files if any
+      const metaPath = path.join(this.dataDir, 'transaction_data_meta.json');
+      if (fs.existsSync(metaPath)) {
+        try {
+          const metaArray = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
+          const meta = metaArray[0];
+          for (let i = 0; i < (meta?.chunks || 0); i++) {
+            const p = path.join(this.dataDir, `transaction_data_${i}.json`);
+            if (fs.existsSync(p)) fs.unlinkSync(p);
+          }
+          fs.unlinkSync(metaPath);
+        } catch (e) {
+          console.warn('[DatabaseManager] Warning cleaning old transaction chunks:', e);
+        }
+      }
+    }
   }
 
   async clearTransactionData(): Promise<void> {
     this.checkInitialized();
     this.transactionData = [];
+    // Remove chunked files if present
+    const metaPath = path.join(this.dataDir, 'transaction_data_meta.json');
+    if (fs.existsSync(metaPath)) {
+      try {
+        const metaArray = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
+        const meta = metaArray[0];
+        for (let i = 0; i < (meta?.chunks || 0); i++) {
+          const p = path.join(this.dataDir, `transaction_data_${i}.json`);
+          if (fs.existsSync(p)) fs.unlinkSync(p);
+        }
+        fs.unlinkSync(metaPath);
+        console.log('[DatabaseManager] Cleared transaction_data chunk files');
+      } catch (e) {
+        console.error('[DatabaseManager] Error clearing transaction_data chunks:', e);
+      }
+    }
     await this.saveJsonFile('transaction_data.json', this.transactionData);
   }
 
   async getTransactionData(): Promise<TransactionData[]> {
     this.checkInitialized();
+    // If chunked meta exists, avoid loading huge datasets into memory
+    const metaPath = path.join(this.dataDir, 'transaction_data_meta.json');
+    if (fs.existsSync(metaPath)) {
+      try {
+        const metaArray = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
+        const meta = metaArray[0];
+        if (meta?.totalTransactions > 100000) {
+          console.log(`[DatabaseManager] Transaction dataset too large (${meta.totalTransactions}). Returning empty array; use chunked access.`);
+          return [];
+        }
+        const all: TransactionData[] = [];
+        for (let i = 0; i < meta.chunks; i++) {
+          const p = path.join(this.dataDir, `transaction_data_${i}.json`);
+          if (fs.existsSync(p)) {
+            const chunk = JSON.parse(fs.readFileSync(p, 'utf8'));
+            all.push(...chunk);
+          }
+        }
+        this.transactionData = all;
+        return all;
+      } catch (e) {
+        console.error('[DatabaseManager] Error loading transaction_data chunks:', e);
+        return [];
+      }
+    }
     return this.transactionData;
+  }
+
+  async getTransactionDataMetadata(): Promise<{ totalTransactions: number; chunks: number; chunkSize: number } | null> {
+    this.checkInitialized();
+    try {
+      const metaPath = path.join(this.dataDir, 'transaction_data_meta.json');
+      if (!fs.existsSync(metaPath)) return null;
+      const metaArray = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
+      return metaArray[0] || null;
+    } catch (e) {
+      console.error('[DatabaseManager] Error reading transaction_data_meta:', e);
+      return null;
+    }
+  }
+
+  async getTransactionDataChunk(index: number): Promise<TransactionData[]> {
+    this.checkInitialized();
+    const meta = await this.getTransactionDataMetadata();
+    if (!meta) return this.transactionData;
+    const p = path.join(this.dataDir, `transaction_data_${index}.json`);
+    if (fs.existsSync(p)) {
+      try {
+        const chunk = JSON.parse(fs.readFileSync(p, 'utf8'));
+        return chunk;
+      } catch (e) {
+        console.error(`[DatabaseManager] Error reading transaction chunk ${index}:`, e);
+        return [];
+      }
+    }
+    return [];
   }
 
   // Calculated rebates methods

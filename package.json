@@ -1,6 +1,6 @@
 {
   "name": "ixaris-rebates-calculator",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "description": "Modern desktop application for calculating Ixaris rebates",
   "main": "dist/main/main.js",
   "scripts": {
@@ -47,7 +47,10 @@
       "target": [
         {
           "target": "default",
-          "arch": ["arm64", "x64"]
+          "arch": [
+            "arm64",
+            "x64"
+          ]
         }
       ]
     },
@@ -76,11 +79,15 @@
       "target": [
         {
           "target": "AppImage",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         },
         {
           "target": "deb",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "category": "Office"
@@ -160,4 +167,3 @@
     "calculator"
   ]
 }
-

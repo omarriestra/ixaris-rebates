@@ -12,6 +12,8 @@ export interface IElectronAPI {
     getCalculatedRebatesChunk: (chunkIndex: number) => Promise<any[]>;
     processCalculatedRebatesInChunks: (processorName: string, options?: any) => Promise<void>;
     getTransactionData: () => Promise<any[]>;
+    getTransactionDataMetadata: () => Promise<{ totalTransactions: number; chunks: number; chunkSize: number } | null>;
+    getTransactionDataChunk: (chunkIndex: number) => Promise<any[]>;
   };
 
   // File operations
@@ -87,6 +89,8 @@ const electronAPI: IElectronAPI = {
     getCalculatedRebatesChunk: (chunkIndex) => ipcRenderer.invoke('db:getCalculatedRebatesChunk', chunkIndex),
     processCalculatedRebatesInChunks: (processorName, options) => ipcRenderer.invoke('db:processCalculatedRebatesInChunks', processorName, options),
     getTransactionData: () => ipcRenderer.invoke('db:getTransactionData'),
+    getTransactionDataMetadata: () => ipcRenderer.invoke('db:getTransactionDataMetadata'),
+    getTransactionDataChunk: (chunkIndex) => ipcRenderer.invoke('db:getTransactionDataChunk', chunkIndex),
   },
 
   file: {

@@ -25,6 +25,58 @@ export class CsvImporter {
     this.dbManager = dbManager;
   }
 
+  private parseNumber(value: any): number {
+    if (value === null || value === undefined || value === '') return 0;
+    try {
+      let s = String(value).trim().replace(/\u00A0/g, '').replace(/\s+/g, '');
+      if (s === '') return 0;
+      if (s.includes(',') && s.includes('.')) {
+        if (s.lastIndexOf(',') > s.lastIndexOf('.')) {
+          s = s.replace(/\./g, '').replace(',', '.');
+        } else {
+          s = s.replace(/,/g, '');
+        }
+      } else if (s.includes(',')) {
+        s = s.replace(',', '.');
+      }
+      const num = Number(s);
+      return isNaN(num) ? 0 : num;
+    } catch {
+      return 0;
+    }
+  }
+
+  private detectDelimiterAndStripSepLine(fileContent: string): { content: string; delimiter: string } {
+    let delimiter = ',';
+    let start = 0;
+
+    // Read only the first line for sep= detection
+    const newlineIdx = fileContent.indexOf('\n');
+    const firstLine = (newlineIdx >= 0 ? fileContent.slice(0, newlineIdx) : fileContent).trim();
+
+    const sepMatch = /^sep=(.)/i.exec(firstLine);
+    if (sepMatch) {
+      delimiter = sepMatch[1];
+      start = newlineIdx >= 0 ? newlineIdx + 1 : fileContent.length; // skip sep= line
+    } else {
+      // Auto-detect from first non-empty portion (up to 8KB)
+      const sample = fileContent.slice(0, 8192);
+      const hdrEnd = sample.indexOf('\n');
+      const header = (hdrEnd >= 0 ? sample.slice(0, hdrEnd) : sample) || '';
+      const candidates: Array<{ d: string; c: number }> = [
+        { d: ';', c: (header.match(/;/g) || []).length },
+        { d: ',', c: (header.match(/,/g) || []).length },
+        { d: '\t', c: (header.match(/\t/g) || []).length },
+        { d: '|', c: (header.match(/\|/g) || []).length },
+      ];
+      candidates.sort((a, b) => b.c - a.c);
+      if (candidates[0].c > 0) delimiter = candidates[0].d;
+    }
+
+    const content = start > 0 ? fileContent.slice(start) : fileContent;
+    return { content, delimiter };
+  }
+
   // Table schema definitions
   private static readonly TABLE_SCHEMAS: { [key: string]: string[] } = {
     'visa_mco_monthly': [
@@ -136,10 +188,14 @@ export class CsvImporter {
 
     try {
       const fileContent = fs.readFileSync(filePath, 'utf-8');
-      const records = parse(fileContent, {
+      const { content, delimiter } = this.detectDelimiterAndStripSepLine(fileContent);
+      const records = parse(content, {
         columns: true,
         skip_empty_lines: true,
-        trim: true
+        trim: true,
+        bom: true,
+        delimiter: delimiter as any,
+        relax_column_count: true
       }) as Record<string, string>[];
 
       const transactions: Omit<TransactionData, 'id' | 'processed_at'>[] = [];
@@ -159,16 +215,16 @@ export class CsvImporter {
             region: record['Region'] || '',
             region_mc: record['Region MC'] || '',
             transaction_date: record['Transaction Date'] || '',
-            bin_card_number: parseInt(record['BIN Card Number']) || 0,
-            transaction_amount: parseFloat(record['-Sum([Transaction Amount])']?.replace(/,/g, '')) || 0,
-            interchange_amount: parseFloat(record['Sum([Interchange Amount])']?.replace(/,/g, '')) || 0,
-            interchange_percentage: parseFloat(record['INTERCHANGE %']?.replace('%', '')) || 0,
+            bin_card_number: this.parseNumber(record['BIN Card Number']) || 0,
+            transaction_amount: this.parseNumber(record['-Sum([Transaction Amount])']) || 0,
+            interchange_amount: this.parseNumber(record['Sum([Interchange Amount])']) || 0,
+            interchange_percentage: this.parseNumber((record['INTERCHANGE %'] || '').toString().replace('%', '')) || 0,
             transaction_id: record['Transaction Id'] || '',
-            transaction_amount_eur: parseFloat(record['Transaction Amount in EUR']?.replace(/,/g, '')) || 0,
-            fx_rate: parseFloat(record['fx']) || 1,
+            transaction_amount_eur: this.parseNumber(record['Transaction Amount in EUR']) || 0,
+            fx_rate: this.parseNumber(record['fx']) || 1,
             pk_reference: record['PK'] || '',
             transaction_merchant_country: record['Transaction Merchant Country'] || '',
-            transaction_merchant_category_code: parseInt(record['Transaction Merchant Category Code']) || 0,
+            transaction_merchant_category_code: this.parseNumber(record['Transaction Merchant Category Code']) || 0,
             merchant_name: record['Merchant Name'] || '',
             transaction_merchant_name: record['Transaction Merchant Name'] || ''
           };

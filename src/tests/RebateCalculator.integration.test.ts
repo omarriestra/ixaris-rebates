@@ -1,6 +1,5 @@
 import { RebateCalculator } from '../main/services/RebateCalculator';
-import { DatabaseManager } from '../database/DatabaseManager';
-import { TransactionRecord } from '../shared/types';
+import { DatabaseManager, TransactionData } from '../database/DatabaseManager';
 
 // Mock DatabaseManager
 jest.mock('../database/DatabaseManager');
@@ -19,30 +18,30 @@ describe('RebateCalculator - Integration Tests for Special Cases', () => {
     mockDatabaseManager.getCalculatedRebates.mockResolvedValue([]);
   });
 
-  // Test Data Factory
-  const createTransaction = (overrides: Partial<TransactionRecord> = {}): TransactionRecord => ({
-    transactionId: 'TXN_INTEGRATION',
-    transactionCardNumber: '1234567890123456',
-    transactionCurrency: 'EUR',
-    providerCustomerCode: 'test#test',
-    transactionType: 'Purchase',
-    transactionCard: 'VISA',
-    salesforceProductName: 'B2B Wallet - Test Product',
-    fundingAccountName: 'Test Account',
+  // Test Data Factory (DB-shape expected by RebateCalculator)
+  const createTransaction = (overrides: Partial<TransactionData> = {}): TransactionData => ({
+    transaction_id: 'TXN_INTEGRATION',
+    transaction_card_number: '1234567890123456',
+    transaction_currency: 'EUR',
+    provider_customer_code: 'test#test',
+    transaction_type: 'Purchase',
+    transaction_card: 'VISA',
+    salesforce_product_name: 'B2B Wallet - Test Product',
+    funding_account_name: 'Test Account',
     region: 'EU',
-    regionMC: 'EU',
-    transactionDate: new Date('2024-12-01'),
-    binCardNumber: 123456,
-    transactionAmount: 1000.00,
-    interchangeAmount: 20.00,
-    interchangePercentage: 2.0,
-    transactionAmountEUR: 1000.00,
-    fxRate: 1.0,
-    pkReference: 'PK_TEST',
-    transactionMerchantCountry: 'ES',
-    transactionMerchantCategoryCode: 4511,
-    merchantName: 'Test Merchant',
-    transactionMerchantName: 'Test Merchant Services',
+    region_mc: 'EU',
+    transaction_date: new Date('2024-12-01').toISOString(),
+    bin_card_number: 123456,
+    transaction_amount: 1000.0,
+    interchange_amount: 20.0,
+    interchange_percentage: 2.0,
+    transaction_amount_eur: 1000.0,
+    fx_rate: 1.0,
+    pk_reference: 'PK_TEST',
+    transaction_merchant_country: 'ES',
+    transaction_merchant_category_code: 4511,
+    merchant_name: 'Test Merchant',
+    transaction_merchant_name: 'Test Merchant Services',
     ...overrides
   });
 
@@ -50,8 +49,8 @@ describe('RebateCalculator - Integration Tests for Special Cases', () => {
     test('should use Voyage Prive calculation for special providers', async () => {
       // Test with Voyage Prive provider
       const transaction = createTransaction({
-        providerCustomerCode: 'amvoyageprivefr#amvoyageprivefr',
-        salesforceProductName: 'B2B Wallet - Voyage Prive Product'
+        provider_customer_code: 'amvoyageprivefr#amvoyageprivefr',
+        salesforce_product_name: 'B2B Wallet - Voyage Prive Product'
       });
 
       // Mock single transaction data
@@ -98,8 +97,8 @@ describe('RebateCalculator - Integration Tests for Special Cases', () => {
     test('should NOT use Voyage Prive for non-Voyage Prive providers', async () => {
       // Test with regular provider
       const transaction = createTransaction({
-        providerCustomerCode: 'regularProvider#regular',
-        salesforceProductName: 'B2B Wallet - Regular Product'
+        provider_customer_code: 'regularProvider#regular',
+        salesforce_product_name: 'B2B Wallet - Regular Product'
       });
 
       mockDatabaseManager.getTransactionData.mockResolvedValue([transaction]);
@@ -139,9 +138,9 @@ describe('RebateCalculator - Integration Tests for Special Cases', () => {
     test('should use Region/Country rules for special providers', async () => {
       // Test with Region/Country provider
       const transaction = createTransaction({
-        providerCustomerCode: 'amesky#amesky',
-        regionMC: 'APAC',
-        transactionMerchantCountry: 'HK'
+        provider_customer_code: 'amesky#amesky',
+        region_mc: 'APAC',
+        transaction_merchant_country: 'HK'
       });
 
       mockDatabaseManager.getTransactionData.mockResolvedValue([transaction]);
@@ -189,28 +188,32 @@ describe('RebateCalculator - Integration Tests for Special Cases', () => {
       expect(mockDatabaseManager.getRegionCountry).toHaveBeenCalled();
       expect(mockDatabaseManager.getVisaMCORebates).toHaveBeenCalled();
 
-      // Should store 2 rebates with region-specific rates
-      expect(mockDatabaseManager.storeCalculatedRebate).toHaveBeenCalledTimes(2);
+      // Should insert rebates in batch
+      expect(mockDatabaseManager.insertCalculatedRebates).toHaveBeenCalledTimes(1);
 
-      const storedRebates = mockDatabaseManager.storeCalculatedRebate.mock.calls;
+      const insertedBatches = mockDatabaseManager.insertCalculatedRebates.mock.calls;
+      const inserted = insertedBatches[0][0]; // first arg is the array of rebates
 
-      // Level 1: 1000 × 1.5% = €15.00 (region rate, NOT standard 0.5%)
-      expect(storedRebates[0][0].rebate_percentage).toBe(1.5);
-      expect(storedRebates[0][0].rebate_amount_eur).toBe(15.00);
-      expect(storedRebates[0][0].calculation_type).toBe('region_country');
+      // Expect 2 rebates with region-specific rates overriding Visa/MCO
+      expect(Array.isArray(inserted)).toBe(true);
+      expect(inserted.length).toBe(2);
 
-      // Level 2: 1000 × 1.0% = €10.00 (region rate, NOT standard 0.3%)
-      expect(storedRebates[1][0].rebate_percentage).toBe(1.0);
-      expect(storedRebates[1][0].rebate_amount_eur).toBe(10.00);
+      const lvl1 = inserted.find((r: any) => r.rebate_level === 1);
+      const lvl2 = inserted.find((r: any) => r.rebate_level === 2);
+      expect(lvl1.rebate_percentage).toBe(1.5);
+      expect(lvl1.rebate_amount_eur).toBe(15.0);
+      expect(lvl1.calculation_type).toBe('region_country');
+      expect(lvl2.rebate_percentage).toBe(1.0);
+      expect(lvl2.rebate_amount_eur).toBe(10.0);
 
       console.log('✅ Region/Country: €15.00 (1.5%), €10.00 (1.0%) - Override working');
     });
 
     test('should handle wildcard "*" rules', async () => {
       const transaction = createTransaction({
-        providerCustomerCode: 'amtttlimited#amtttlimited',
-        regionMC: 'EU',
-        transactionMerchantCountry: 'IT' // Not specifically configured
+        provider_customer_code: 'amtttlimited#amtttlimited',
+        region_mc: 'EU',
+        transaction_merchant_country: 'IT' // Not specifically configured
       });
 
       mockDatabaseManager.getTransactionData.mockResolvedValue([transaction]);
@@ -252,13 +255,15 @@ describe('RebateCalculator - Integration Tests for Special Cases', () => {
         month: 12
       });
 
-      expect(mockDatabaseManager.storeCalculatedRebate).toHaveBeenCalledTimes(1);
-
-      const storedRebate = mockDatabaseManager.storeCalculatedRebate.mock.calls[0][0];
-
+      expect(mockDatabaseManager.insertCalculatedRebates).toHaveBeenCalledTimes(1);
+      const insertedCalls = mockDatabaseManager.insertCalculatedRebates.mock.calls;
+      const batch = insertedCalls[0][0];
+      expect(Array.isArray(batch)).toBe(true);
+      expect(batch.length).toBe(1);
+      const only = batch[0];
       // Should use wildcard rate (0.9%), NOT standard rate (0.4%)
-      expect(storedRebate.rebate_percentage).toBe(0.9);
-      expect(storedRebate.rebate_amount_eur).toBe(9.00);
+      expect(only.rebate_percentage).toBe(0.9);
+      expect(only.rebate_amount_eur).toBe(9.0);
 
       console.log('✅ Wildcard "*" rule: €9.00 (0.9%) - Wildcard matching working');
     });

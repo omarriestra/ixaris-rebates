@@ -154,6 +154,24 @@ ipcMain.handle('db:getTransactionData', async () => {
   return await databaseManager.getTransactionData();
 });
 
+ipcMain.handle('db:getTransactionDataMetadata', async () => {
+  try {
+    return await (databaseManager as any).getTransactionDataMetadata?.();
+  } catch (error) {
+    console.error('[Main] IPC db:getTransactionDataMetadata error:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('db:getTransactionDataChunk', async (event, chunkIndex: number) => {
+  try {
+    return await (databaseManager as any).getTransactionDataChunk?.(chunkIndex);
+  } catch (error) {
+    console.error('[Main] IPC db:getTransactionDataChunk error:', error);
+    throw error;
+  }
+});
+
 ipcMain.handle('file:selectDataFolder', async () => {
   const result = await dialog.showOpenDialog(mainWindow, {
     properties: ['openDirectory'],

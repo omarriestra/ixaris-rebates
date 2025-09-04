@@ -130,7 +130,7 @@ describe('RebateCalculator - COE-46 Compliance Tests', () => {
           provider_customer_code: 'partnerpay#partnerpay',
           product_name: 'B2B Wallet - PartnerPay Product',
           partnerpay_bin: '654321', // First 6 digits - should match
-          partner_pay_airline: 'Air Europa (UX)', // Enhanced merchant name
+          partner_pay_airline: 'Air Europa', // Must match raw transaction.merchantName for 4-key match
           rebate_1_yearly: 1.2,    // 1.2% yearly
           rebate_1_monthly: 0.8,   // 0.8% monthly (should be ignored)
           rebate_2_yearly: null,   // null yearly
